@@ -1,14 +1,13 @@
-"""
-e5-multilingualモデルの埋め込みをSTSデータセットで評価
-Spearman相関係数を使用
-"""
 from sentence_transformers import SentenceTransformer
 import pandas as pd
 import numpy as np
 from scipy.stats import spearmanr
 from loguru import logger
 
-def evaluate_sts(model_path: str, csv_path: str = "dataset_JA_Clinical_STS.csv"):
+def evaluate_sts(
+    model_path: str,
+    csv_path: str = "dataset_JA_Clinical_STS.csv",
+) -> tuple[float, float]:
     """
     STSデータセットでモデルを評価
     
@@ -16,32 +15,32 @@ def evaluate_sts(model_path: str, csv_path: str = "dataset_JA_Clinical_STS.csv")
         model_path: モデルのパス（"intfloat/multilingual-e5-large" または "./trained_model"）
         csv_path: STSデータセットのCSVファイルパス
     """
-    # 1. モデルを読み込む
+    # モデルの読み込み
     logger.info(f"モデルを読み込み中: {model_path}")
     model = SentenceTransformer(model_path)
-    logger.info("✓ モデル読み込み完了")
+    logger.info("モデル読み込み完了")
     
-    # 2. データセットを読み込む
+    # データセットの読み込み
     logger.info(f"データセットを読み込み中: {csv_path}")
     df = pd.read_csv(csv_path, header=None, names=['sentence1', 'sentence2', 'score'])
-    logger.info(f"✓ データ読み込み完了: {len(df)}件のペア")
+    logger.info(f"データ読み込み完了: {len(df)}件のペア")
     
-    # 3. 文のペアを埋め込みベクトルに変換
+    # 文のペアを埋め込みベクトルに変換
     logger.info("埋め込みベクトルを計算中...")
     embeddings1 = model.encode(df['sentence1'].tolist(), normalize_embeddings=True, show_progress_bar=True)
     embeddings2 = model.encode(df['sentence2'].tolist(), normalize_embeddings=True, show_progress_bar=True)
-    logger.info("✓ 埋め込み計算完了")
+    logger.info("埋め込み計算完了")
     
-    # 4. コサイン類似度を計算
+    # コサイン類似度を計算
     logger.info("コサイン類似度を計算中...")
     cosine_similarities = np.sum(embeddings1 * embeddings2, axis=1)
-    logger.info("✓ 類似度計算完了")
+    logger.info("類似度計算完了")
     
-    # 5. Spearman相関係数を計算
+    # Spearman相関係数を計算
     true_scores = df['score'].values
     spearman_corr, p_value = spearmanr(cosine_similarities, true_scores)
     
-    # 6. 結果を表示
+    # 結果を表示
     logger.info("\n=== 評価結果 ===")
     logger.info(f"Spearman相関係数: {spearman_corr:.4f}")
     logger.info(f"p値: {p_value:.4e}")
@@ -56,9 +55,7 @@ if __name__ == "__main__":
     logger.info("=== 事前学習済みモデル (intfloat/multilingual-e5-large) の評価 ===")
     evaluate_sts("intfloat/multilingual-e5-large")
     
-    # 学習済みモデルがある場合は評価
-    import os
-    if os.path.exists("./trained_model"):
-        logger.info("\n=== 学習済みモデル (./trained_model) の評価 ===")
-        evaluate_sts("./trained_model")
+    # 学習済みモデルの評価
+    logger.info("\n=== 学習済みモデル (./trained_model) の評価 ===")
+    evaluate_sts("./trained_model")
 
